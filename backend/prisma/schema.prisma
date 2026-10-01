@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum EventCategory {
+  LECTURE
+  WORK
+  BUSINESS
+  GYM
+  TRAVEL
+  REST
+  PERSONAL
+  MEETING
+  OTHER
+}
+
+enum GoalType {
+  STUDY
+  RESEARCH
+  BUSINESS
+  WORK
+  FITNESS
+  PERSONAL
+  OTHER
+}
+
+enum GoalFrequency {
+  DAILY
+  WEEKDAYS
+  WEEKENDS
+  WEEKLY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ScheduleSourceType {
+  EVENT
+  GOAL
+  SUBJECT
+  SYSTEM
+  MANUAL
+}
+
+enum EventExceptionType {
+  CANCELLED
+  OVERRIDDEN
+}
+
+enum ScheduleVersionSource {
+  GENERATED
+  RESTORED
+  BASELINE
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  name                String
+  email               String              @unique
+  passwordHash        String
+  timezone            String              @default("UTC")
+  onboardingCompleted Boolean             @default(false)
+  plan                Plan                @default(FREE)
+  refreshTokenHash    String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  preferences         SchedulePreference?
+  events              Event[]
+  subjects            Subject[]
+  goals               Goal[]
+  scheduleBlocks      ScheduleBlock[]
+  blockedPeriods      BlockedPeriod[]
+  scheduleVersions    ScheduleVersion[]
+
+  @@index([email])
+}
+
+model SchedulePreference {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  wakeTime             String    @default("07:00")
+  sleepTime            String    @default("23:00")
+  weekdayCutoffTime    String    @default("18:00")
+  defaultTravelMinutes Int       @default(15)
+  defaultRestMinutes   Int       @default(10)
+  timezone             String    @default("UTC")
+  weekStartsOn         DayOfWeek @default(MONDAY)
+  maxScheduledMinutesPerDay Int  @default(480)
+  minimumBreakMinutes       Int  @default(15)
+  breakAfterContinuousMinutes Int @default(120)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  userId      String
+  subjectId   String?
+  title       String
+  description String?
+  category    EventCategory @default(OTHER)
+  dayOfWeek   DayOfWeek
+  eventDate   DateTime?
+  startTime   String
+  endTime     String
+  location    String?
+  recurring   Boolean       @default(true)
+  isLocked    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  exceptions  EventException[]
+
+  @@index([userId, dayOfWeek])
+  @@index([subjectId])
+  @@index([userId, eventDate])
+}
+
+model EventException {
+  id                   String             @id @default(cuid())
+  eventId              String
+  date                 DateTime
+  type                 EventExceptionType
+  replacementStartTime String?
+  replacementEndTime   String?
+  replacementTitle     String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  event                Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, date])
+  @@index([eventId, date])
+}
+
+model Subject {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  code            String?
+  revisionMinutes Int      @default(60)
+  colorKey        String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events          Event[]
+
+  @@index([userId, active])
+}
+
+model Goal {
+  id                     String        @id @default(cuid())
+  userId                 String
+  title                  String
+  description            String?
+  type                   GoalType      @default(OTHER)
+  frequency              GoalFrequency @default(WEEKLY)
+  durationMinutes        Int
+  weekdayDurationMinutes Int?
+  weekendDurationMinutes Int?
+  priority               Priority      @default(MEDIUM)
+  preferredDays          DayOfWeek[]    @default([])
+  allowedDays            DayOfWeek[]    @default([])
+  preferredStartTime     String?
+  preferredEndTime       String?
+  earliestStartTime      String?
+  latestEndTime          String?
+  allowSplit             Boolean        @default(true)
+  minimumBlockMinutes    Int            @default(30)
+  maximumBlockMinutes    Int?
+  active                 Boolean       @default(true)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+}
+
+model ScheduleBlock {
+  id         String             @id @default(cuid())
+  userId     String
+  title      String
+  category   EventCategory      @default(OTHER)
+  date       DateTime
+  startTime  String
+  endTime    String
+  sourceType ScheduleSourceType @default(MANUAL)
+  sourceId   String?
+  generated  Boolean            @default(false)
+  locked     Boolean            @default(false)
+  completed  Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model BlockedPeriod {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String
+  date      DateTime
+  fullDay   Boolean       @default(true)
+  startTime String?
+  endTime   String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model ScheduleVersion {
+  id        String                @id @default(cuid())
+  userId    String
+  weekStart DateTime
+  label     String?
+  source    ScheduleVersionSource @default(GENERATED)
+  active    Boolean               @default(false)
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blocks    ScheduleVersionBlock[]
+
+  @@index([userId, weekStart, createdAt])
+  @@index([userId, weekStart, active])
+}
+
+model ScheduleVersionBlock {
+  id                String             @id @default(cuid())
+  scheduleVersionId String
+  title             String
+  category          EventCategory      @default(OTHER)
+  date              DateTime
+  startTime         String
+  endTime           String
+  sourceType        ScheduleSourceType
+  sourceId          String?
+  generated         Boolean
+  locked            Boolean
+  completed         Boolean
+  scheduleVersion   ScheduleVersion    @relation(fields: [scheduleVersionId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleVersionId, date])
+}
