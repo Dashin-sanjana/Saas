@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { Field, Input } from "../components/ui/Field";
+import { Field, Input, PasswordInput } from "../components/ui/Field";
 import { useAuth } from "../providers/AuthProvider";
 import { useToast } from "../providers/ToastProvider";
 
@@ -34,7 +34,7 @@ export function LoginPage() {
       <p className="mt-2 text-sm text-muted-foreground">Sign in to continue planning your week.</p>
       <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)}>
         <Field label="Email" error={errors.email?.message}><Input type="email" {...register("email")} /></Field>
-        <Field label="Password" error={errors.password?.message}><Input type="password" {...register("password")} /></Field>
+        <Field label="Password" error={errors.password?.message}><PasswordInput {...register("password")} /></Field>
         <Button disabled={isSubmitting}>{isSubmitting ? "Signing in..." : "Login"}</Button>
       </form>
       <p className="mt-4 text-sm text-muted-foreground">No account? <Link className="text-primary" to="/register">Create one</Link></p>

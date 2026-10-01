@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { Field, Input } from "../components/ui/Field";
+import { Field, Input, PasswordInput } from "../components/ui/Field";
 import { useAuth } from "../providers/AuthProvider";
 import { useToast } from "../providers/ToastProvider";
 
@@ -41,7 +41,7 @@ export function RegisterPage() {
       <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)}>
         <Field label="Name" error={errors.name?.message}><Input {...register("name")} /></Field>
         <Field label="Email" error={errors.email?.message}><Input type="email" {...register("email")} /></Field>
-        <Field label="Password" error={errors.password?.message}><Input type="password" {...register("password")} /></Field>
+        <Field label="Password" error={errors.password?.message}><PasswordInput {...register("password")} /></Field>
         <Field label="Timezone" error={errors.timezone?.message}><Input {...register("timezone")} /></Field>
         <Button disabled={isSubmitting}>{isSubmitting ? "Creating..." : "Start Free"}</Button>
       </form>
